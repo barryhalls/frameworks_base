@@ -61,6 +61,9 @@ LOCAL_SHARED_LIBRARIES := \
         libcamera_client libstagefright_foundation \
         libgui libdl
 
+ifeq ($(BOARD_USE_YAMAHAPLAYER),true)
+    LOCAL_CFLAGS += -DYAMAHAPLAYER
+endif
 
 LOCAL_WHOLE_STATIC_LIBRARY := libmedia_helper
 

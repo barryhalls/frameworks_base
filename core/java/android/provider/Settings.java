@@ -2495,6 +2495,18 @@ public final class Settings {
          * @hide
          */
         public static final String LOCKSCREEN_BATTERY = "lockscreen_battery";
+        
+        /**
+         * Setting to use lockscreen alongside secure lock
+         * @hide
+         */
+        public static final String SHOW_LOCK_BEFORE_UNLOCK = "show_lock_before_unlock";
+        
+        /**
+         * custom lockscreen text color
+         * @hide
+         */
+        public static final String LOCKSCREEN_CUSTOM_TEXT_COLOR = "lockscreen_custom_text_color";
 
         /**
          * The action to take when long pressing home
@@ -2615,11 +2627,26 @@ public final class Settings {
          * @hide
          */
         public static final String LOCKSCREEN_QUICK_UNLOCK_CONTROL = "lockscreen_quick_unlock_control";
+        
+        /**
+         * @hide
+         */
+        public static final String LOCKSCREEN_WEATHER = "lockscreen_weather";
 
         /**
          * @hide
          */
         public static final String USE_WEATHER = "use_weather";
+        
+        /**
+         * @hide
+         */
+        public static final String WEATHER_SHOW_LOCATION = "weather_show_location";
+        
+        /**
+         * @hide
+         */
+        public static final String WEATHER_STATUSBAR_STYLE = "weather_statusbar_style";
 
         /**
          * Whether to enable torch by long pressing power from a screen-off state
