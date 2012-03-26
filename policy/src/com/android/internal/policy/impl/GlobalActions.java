@@ -33,6 +33,7 @@ import android.os.IBinder;
 import android.os.Message;
 import android.os.Messenger;
 import android.os.RemoteException;
+import android.os.ServiceManager;
 import android.os.SystemProperties;
 import android.provider.Settings;
 import android.provider.Settings.SettingNotFoundException;
@@ -45,7 +46,9 @@ import android.util.Slog;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.KeyEvent;
 import android.view.WindowManager;
+import android.view.IWindowManager;
 import android.widget.BaseAdapter;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -75,6 +78,8 @@ class GlobalActions implements DialogInterface.OnDismissListener, DialogInterfac
     private SilentModeAction mSilentModeAction;
     private ToggleAction mAirplaneModeOn;
     private ToggleAction mPowerSaverOn;
+    private ToggleAction mTorchToggle;
+    private NavBarAction mNavBarHideToggle;
 
     private MyAdapter mAdapter;
 
@@ -83,7 +88,14 @@ class GlobalActions implements DialogInterface.OnDismissListener, DialogInterfac
     private ToggleAction.State mAirplaneState = ToggleAction.State.Off;
     private boolean mIsWaitingForEcmExit = false;
     private boolean mEnablePowerSaverToggle = true;
-    private boolean mEnableScreenshotToggle = true;
+    private boolean mEnableScreenshotToggle = false;
+    private boolean mEnableTorchToggle = true;
+    private boolean mEnableAirplaneToggle = true;
+    private boolean mReceiverRegistered = false;    
+    private boolean mEnableNavBarHideToggle = false;;
+
+    public static final String INTENT_TORCH_ON = "com.android.systemui.INTENT_TORCH_ON";
+    public static final String INTENT_TORCH_OFF = "com.android.systemui.INTENT_TORCH_OFF";
 
     /**
      * @param context everything needs a context :(
@@ -113,6 +125,11 @@ class GlobalActions implements DialogInterface.OnDismissListener, DialogInterfac
         mKeyguardShowing = keyguardShowing;
         mDeviceProvisioned = isDeviceProvisioned;
         
+        if(mDialog != null) {
+            mReceiverRegistered = false;
+            mDialog.cancel();
+            
+        }
         //always update the PowerMenu dialog
         mDialog = createDialog();
 
@@ -131,7 +148,16 @@ class GlobalActions implements DialogInterface.OnDismissListener, DialogInterfac
                 Settings.System.POWER_DIALOG_SHOW_POWER_SAVER, 1) == 1;
         
         mEnableScreenshotToggle = Settings.System.getInt(mContext.getContentResolver(),
-                Settings.System.POWER_DIALOG_SHOW_SCREENSHOT, 0) == 1;        
+                Settings.System.POWER_DIALOG_SHOW_SCREENSHOT, 0) == 1;  
+        
+        mEnableTorchToggle = Settings.System.getInt(mContext.getContentResolver(),
+                Settings.System.POWER_DIALOG_SHOW_TORCH_TOGGLE, 0) == 1;
+        
+        mEnableAirplaneToggle = Settings.System.getInt(mContext.getContentResolver(),
+                Settings.System.POWER_DIALOG_SHOW_AIRPLANE_TOGGLE, 1) == 1;
+        
+        mEnableNavBarHideToggle= Settings.System.getInt(mContext.getContentResolver(),
+                Settings.System.POWER_DIALOG_SHOW_NAVBAR_HIDE, 0) == 1;
         
         mSilentModeAction = new SilentModeAction(mAudioManager, mHandler);
 
@@ -198,6 +224,36 @@ class GlobalActions implements DialogInterface.OnDismissListener, DialogInterfac
             }
         };
         
+        mNavBarHideToggle = new NavBarAction(mHandler); 
+        
+        mTorchToggle = new ToggleAction(
+                R.drawable.ic_lock_torch,
+                R.drawable.ic_lock_torch,
+                R.string.global_actions_toggle_torch,
+                R.string.global_actions_torch_on_status,
+                R.string.global_actions_torch_off_status) {
+
+            void onToggle(boolean on) {
+                if (on) {
+                    Intent i = new Intent(INTENT_TORCH_ON);
+                    i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    mContext.startActivity(i);
+                } else {
+                    Intent i = new Intent(INTENT_TORCH_OFF);
+                    i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    mContext.startActivity(i);
+                }
+            }
+
+            public boolean showDuringKeyguard() {
+                return true;
+            }
+
+            public boolean showBeforeProvisioning() {
+                return false;
+            }
+        };
+        
         mItems = new ArrayList<Action>();
 
         // first: power off
@@ -238,7 +294,12 @@ class GlobalActions implements DialogInterface.OnDismissListener, DialogInterfac
                 });
 
         // next: airplane mode
-        mItems.add(mAirplaneModeOn);
+        if (mEnableAirplaneToggle) {
+            Slog.e(TAG, "Adding AirplaneToggle");
+            mItems.add(mAirplaneModeOn);
+        } else {
+            Slog.e(TAG, "not adding AirplaneToggle");
+        }
         
         // next: power saver
         try {
@@ -257,8 +318,8 @@ class GlobalActions implements DialogInterface.OnDismissListener, DialogInterfac
        
         
         // next: screenshot
-        //if (mEnableScreenshotToggle) {
-            //Slog.e(TAG, "Adding screenshot");
+        if (mEnableScreenshotToggle) {
+            Slog.e(TAG, "Adding screenshot");
             mItems.add(new SinglePressAction(com.android.internal.R.drawable.ic_lock_screenshot,
                     R.string.global_action_screenshot) {
                 public void onPress() {
@@ -273,10 +334,25 @@ class GlobalActions implements DialogInterface.OnDismissListener, DialogInterfac
                     return true;
                 }
             });
-      //  }
-// else {
-  //          Slog.e(TAG, "Not adding screenshot");
-    //    }
+        } else {
+            Slog.e(TAG, "Not adding screenshot");
+        }
+       
+        // Next Torch
+        if(mEnableTorchToggle) {
+            Slog.e(TAG, "Adding TorchToggle");
+            mItems.add(mTorchToggle); 
+        } else {
+            Slog.e(TAG, "not adding TorchToggle");
+        }
+              
+        // Next NavBar Hide
+        if(mEnableNavBarHideToggle) {
+            Slog.e(TAG, "Adding NavBarhHideToggle");
+            mItems.add(mNavBarHideToggle); 
+        } else {
+            Slog.e(TAG, "not adding NavBarHideToggle");
+        }
 
         // last: silent mode
         if (SHOW_SILENT_TOGGLE) {
@@ -395,18 +471,21 @@ class GlobalActions implements DialogInterface.OnDismissListener, DialogInterfac
         if (SHOW_SILENT_TOGGLE) {
             IntentFilter filter = new IntentFilter(AudioManager.RINGER_MODE_CHANGED_ACTION);
             mContext.registerReceiver(mRingerModeReceiver, filter);
+            mReceiverRegistered = true;
         }
         final boolean powerSaverOn = Settings.Secure.getInt(mContext.getContentResolver(),
                 Settings.Secure.POWER_SAVER_MODE, PowerSaverService.POWER_SAVER_MODE_OFF) == PowerSaverService.POWER_SAVER_MODE_ON;
         mPowerSaverOn.updateState(powerSaverOn ? ToggleAction.State.On : ToggleAction.State.Off);
-
     }
 
 
     /** {@inheritDoc} */
     public void onDismiss(DialogInterface dialog) {
         if (SHOW_SILENT_TOGGLE) {
-            mContext.unregisterReceiver(mRingerModeReceiver);
+            if(mReceiverRegistered) {
+                mContext.unregisterReceiver(mRingerModeReceiver);
+                mReceiverRegistered = false;
+            }
         }
     }
 
@@ -739,6 +818,108 @@ class GlobalActions implements DialogInterface.OnDismissListener, DialogInterfac
             mAudioManager.setRingerMode(indexToRingerMode(index));
             mHandler.sendEmptyMessageDelayed(MESSAGE_DISMISS, DIALOG_DISMISS_DELAY);
         }
+    }
+
+    private static class NavBarAction implements Action, View.OnClickListener {
+
+        private final int[] ITEM_IDS = { R.id.navbartoggle, R.id.navbarhome, R.id.navbarback,R.id.navbarmenu };
+        
+        public Context mContext;
+        public boolean mNavBarVisible;
+        private final Handler mHandler;
+        private IWindowManager mWindowManager;
+        private int mInjectKeycode;
+
+        NavBarAction(Handler handler) {
+        	mHandler = handler;  
+        }
+
+
+        public View create(Context context, View convertView, ViewGroup parent,
+                LayoutInflater inflater) {
+        	mContext = context;
+        	mNavBarVisible = Settings.System.getInt(mContext.getContentResolver(),
+                    Settings.System.NAVIGATION_BAR_BUTTONS_SHOW, 1) == 1;
+        	mWindowManager = IWindowManager.Stub.asInterface(ServiceManager.getService("window"));
+                 	
+            View v = inflater.inflate(R.layout.global_actions_navbar_mode, parent, false);
+
+            for (int i = 0; i < 4; i++) {
+                View itemView = v.findViewById(ITEM_IDS[i]);
+                itemView.setSelected((i==0)&&mNavBarVisible);  // set selected on item 0 if NavBarHideOn is off
+                // Set up click handler
+                itemView.setTag(i);
+                itemView.setOnClickListener(this);
+            }
+            return v;
+        }
+
+        public void onPress() {
+        }
+
+        public boolean showDuringKeyguard() {
+            return true;
+        }
+
+        public boolean showBeforeProvisioning() {
+            return false;
+        }
+
+        public boolean isEnabled() {
+            return true;
+        }
+
+        void willCreate() {
+        }
+
+        public void onClick(View v) {
+            if (!(v.getTag() instanceof Integer)) return;
+
+            int index = (Integer) v.getTag();
+            
+            switch (index) {
+            
+            case 0 :
+                Settings.System.putInt(mContext.getContentResolver(),
+                        Settings.System.NAVIGATION_BAR_BUTTONS_SHOW,
+                         mNavBarVisible ? 0 : 1);
+                v.setSelected(!mNavBarVisible);
+                mHandler.sendEmptyMessage(MESSAGE_DISMISS);
+                break;
+                
+            case 1:
+            	 injectKeyDelayed(KeyEvent.KEYCODE_HOME);
+            	 mHandler.sendEmptyMessage(MESSAGE_DISMISS);
+            	break;
+            	
+            case 2:    	
+            	injectKeyDelayed(KeyEvent.KEYCODE_BACK);
+            	mHandler.sendEmptyMessage(MESSAGE_DISMISS);
+            	break;
+            	
+            case 3:    	
+            	injectKeyDelayed(KeyEvent.KEYCODE_MENU);
+            	mHandler.sendEmptyMessage(MESSAGE_DISMISS);
+            	break;	    
+            }  
+        }
+     
+        public void injectKeyDelayed(int keycode){
+        	mInjectKeycode = keycode;
+        	mHandler.removeCallbacks(onInjectKeyDelayed);
+        	mHandler.postDelayed(onInjectKeyDelayed, 50);
+        }
+
+        final Runnable onInjectKeyDelayed = new Runnable() {
+        	public void run() {
+        		try {
+        			mWindowManager.injectKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, mInjectKeycode), true);
+        			mWindowManager.injectKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, mInjectKeycode), true);
+        		} catch (RemoteException e) {
+        			e.printStackTrace();
+        		}
+        	}
+        };
     }
 
     private BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {

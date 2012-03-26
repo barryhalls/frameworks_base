@@ -2479,7 +2479,22 @@ public final class Settings {
         /**
          * @hide
          */
+        public static final String POWER_DIALOG_SHOW_TORCH_TOGGLE = "power_dialog_show_torch_toggle";
+        
+        /**
+         * @hide
+         */
+        public static final String POWER_DIALOG_SHOW_NAVBAR_HIDE = "power_dialog_show_navbar_hide";
+
+        /**
+         * @hide
+         */
         public static final String POWER_DIALOG_SHOW_SCREENSHOT = "power_dialog_show_screenshot";
+        
+        /**
+         * @hide
+         */
+        public static final String POWER_DIALOG_SHOW_AIRPLANE_TOGGLE = "power_dialog_show_airplane_toggle";
 
         /**
          * @hide
@@ -2567,6 +2582,12 @@ public final class Settings {
          */
         public static final String LOCKSCREEN_STYLE_MULTIWAVEVIEW_SILENTMODE =
                 "lockscreen_style_multiwaveview_silentmode";
+        
+        /**
+         * App to launch with custom app toggle enabled
+         * @hide
+         */
+        public static final String LOCKSCREEN_CUSTOM_APP_ACTIVITY = "lockscreen_custom_app_activity";
 
         /**
          * Lockscreen custom app array 1 [0] - Left 2 [1] - Right 3 [2] - Top
@@ -2615,12 +2636,6 @@ public final class Settings {
         public static final String LOCKSCREEN_BATTERY = "lockscreen_battery";
         
         /**
-         * Setting to allow % on lockscreen at low battery.
-         * @hide
-         */
-        public static final String LOCKSCREEN_LOW_BATTERY = "lockscreen_low_battery";
-        
-        /**
          * 
          * @hide
          */
@@ -2637,6 +2652,24 @@ public final class Settings {
          * @hide
          */
         public static final String LOCKSCREEN_CALENDAR_SOURCES = "lockscreen_calendar_sources";
+        
+        /**
+         * 
+         * @hide
+         */
+        public static final String LOCKSCREEN_CALENDAR_RANGE = "lockscreen_calendar_range";
+        
+        /**
+         * 
+         * @hide
+         */
+        public static final String LOCKSCREEN_CALENDAR_HIDE_ONGOING = "lockscreen_calendar_hide_ongoing";
+        
+        /**
+         * 
+         * @hide
+         */
+        public static final String LOCKSCREEN_CALENDAR_USE_COLORS = "lockscreen_calendar_use_colors";
         
         /**
          * 
@@ -2802,6 +2835,15 @@ public final class Settings {
          * @hide
          */
         public static final String ENABLE_FAST_TORCH = "enable_fast_torch";
+		/**
+         * @hide
+         */
+        public static final String NAVIGATION_BAR_HEIGHT = "navigation_bar_height";
+
+        /**
+         * @hide
+         */
+        public static final String NAVIGATION_BAR_WIDTH = "navigation_bar_width";
     }
 
     /**

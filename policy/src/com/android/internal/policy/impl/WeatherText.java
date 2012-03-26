@@ -50,7 +50,7 @@ public class WeatherText extends TextView {
         super.onAttachedToWindow();
         if (!mAttached) {
             mAttached = true;
-            IntentFilter filter = new IntentFilter("com.aokp.slimsettings.INTENT_WEATHER_UPDATE");
+            IntentFilter filter = new IntentFilter("com.ar.slimsettings.INTENT_WEATHER_UPDATE");
             getContext().registerReceiver(weatherReceiver, filter, null, getHandler());
 
             SettingsObserver so = new SettingsObserver(getHandler());

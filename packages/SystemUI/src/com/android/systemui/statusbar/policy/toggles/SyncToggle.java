@@ -27,38 +27,50 @@ import android.view.KeyEvent;
 import com.android.systemui.R;
 
 public class SyncToggle extends Toggle {
+	
 	private Handler mHandler = new Handler();
 
     private SyncStatusObserver mSyncObserver = new SyncStatusObserver() {
         public void onStatusChanged(int which) {
-		mHandler.post(onSyncUpdated);
+        	mHandler.post(onSyncUpdated);
         	// View cannot be updated outside UI thread.  use handler to run update
         }
     };
 
-	final Runnable onSyncUpdated = new Runnable() {
+    final Runnable onSyncUpdated = new Runnable() {
     	public void run() {
     		updateState();
     	}
     };
-
+    
     public SyncToggle(Context context) {
         super(context);
         updateState();
         ContentResolver.addStatusChangeListener(ContentResolver.SYNC_OBSERVER_TYPE_SETTINGS,
                 mSyncObserver);
         setLabel(R.string.toggle_sync);
-        setIcon(R.drawable.toggle_sync);
+        if (mToggle.isChecked())
+        	setIcon(R.drawable.toggle_sync);
+        else
+        	setIcon(R.drawable.toggle_sync_off);
     }
 
     @Override
     protected void onCheckChanged(boolean isChecked) {
         ContentResolver.setMasterSyncAutomatically(isChecked);
+        if (mToggle.isChecked())
+        	setIcon(R.drawable.toggle_sync);
+        else
+        	setIcon(R.drawable.toggle_sync_off);
     }
 
     @Override
     protected void updateInternalToggleState() {
         mToggle.setChecked(ContentResolver.getMasterSyncAutomatically());
+        if (mToggle.isChecked())
+        	setIcon(R.drawable.toggle_sync);
+        else
+        	setIcon(R.drawable.toggle_sync_off);
     }
 
     @Override

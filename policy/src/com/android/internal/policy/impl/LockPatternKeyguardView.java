@@ -55,6 +55,7 @@ import android.os.Parcelable;
 import android.os.RemoteException;
 import android.os.SystemClock;
 import android.os.SystemProperties;
+import android.provider.Settings;
 import android.telephony.TelephonyManager;
 import android.text.TextUtils;
 import android.util.Log;
@@ -105,7 +106,9 @@ public class LockPatternKeyguardView extends KeyguardViewBase implements Handler
     private volatile boolean mWindowFocused = false;
     private boolean mEnableFallback = false; // assume no fallback UI until we know better
 
-    private boolean mShowLockBeforeUnlock = false;
+	private boolean mShowLockBeforeUnlock = false || (Settings.System.getInt(
+			mContext.getContentResolver(),
+			Settings.System.SHOW_LOCK_BEFORE_UNLOCK, 0) == 1);
 
     // The following were added to support FaceLock
     private IFaceLockInterface mFaceLockService;
@@ -721,6 +724,12 @@ public class LockPatternKeyguardView extends KeyguardViewBase implements Handler
     //Ignore these events; they are implemented only because they come from the same interface
     @Override
     public void onRefreshBatteryInfo(boolean showBatteryInfo, boolean pluggedIn, int batteryLevel)
+    {}
+    @Override
+    public void onRefreshWeatherInfo(Intent weatherIntent)
+    {}
+    @Override
+    public void onRefreshCalendarInfo()
     {}
     @Override
     public void onTimeChanged() {}

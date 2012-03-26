@@ -21,25 +21,27 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 
 import android.app.ActivityManager;
-import android.content.BroadcastReceiver;
+import android.content.ActivityNotFoundException;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.content.pm.PackageManager.NameNotFoundException;
 import android.content.res.ColorStateList;
 import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.database.ContentObserver;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.media.AudioManager;
+import android.net.Uri;
 import android.os.Handler;
 import android.provider.MediaStore;
 import android.provider.Settings;
 import android.util.Log;
-import android.view.KeyEvent;
+import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -47,6 +49,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import com.android.internal.R;
+import com.android.internal.widget.DigitalClock;
 import com.android.internal.widget.LockPatternUtils;
 import com.android.internal.widget.SlidingTab;
 import com.android.internal.widget.WaveView;
@@ -61,6 +64,7 @@ class LockScreen extends LinearLayout implements KeyguardScreen {
 
     private static final int ON_RESUME_PING_DELAY = 500; // delay first ping until the screen is on
     private static final boolean DBG = false;
+    private static final boolean DEBUG = DBG;
     private static final String TAG = "LockScreen";
     private static final String ENABLE_MENU_KEY_FILE = "/data/local/enable_menu_key";
     private static final int WAIT_FOR_ANIMATION_TIMEOUT = 0;
@@ -71,6 +75,8 @@ class LockScreen extends LinearLayout implements KeyguardScreen {
     public static final int LAYOUT_OCTO = 8;
 
     private int mLockscreenTargets = LAYOUT_STOCK;
+    
+    private static final int COLOR_WHITE = 0xFFFFFFFF;
 
     private LockPatternUtils mLockPatternUtils;
     private KeyguardUpdateMonitor mUpdateMonitor;
@@ -89,11 +95,15 @@ class LockScreen extends LinearLayout implements KeyguardScreen {
     private View mUnlockWidget;
 
     private TextView mCarrier;
+    private DigitalClock mDigitalClock;
 
     private Drawable[] lockDrawables;
     
     ArrayList<Target> lockTargets = new ArrayList<Target>();
-
+    
+    private String mCustomAppActivity = (Settings.System.getString(mContext.getContentResolver(),
+            Settings.System.LOCKSCREEN_CUSTOM_APP_ACTIVITY));  
+    
     private interface UnlockWidgetCommonMethods {
         // Update resources based on phone state
         public void updateResources();
@@ -332,7 +342,7 @@ class LockScreen extends LinearLayout implements KeyguardScreen {
         String action = ACTION_NULL;
         Drawable icon;
         String customAppIntentUri;
-        int index;
+        final int index;
 
         public Target(int index) {
             this.index = index;
@@ -347,6 +357,26 @@ class LockScreen extends LinearLayout implements KeyguardScreen {
             Drawable drawable = null;
             PackageManager pm = getContext().getPackageManager();
             Resources res = getContext().getResources();
+
+            String customIconUri = Settings.System.getString(getContext().getContentResolver(),
+                    Settings.System.LOCKSCREEN_CUSTOM_APP_ICONS[index]);
+
+            if (customIconUri != null && !customIconUri.equals("") && customIconUri.startsWith("file")) {
+                // it's an icon the user chose from the gallery here
+                File icon = new File(Uri.parse(customIconUri).getPath());
+                if(icon.exists())
+                    return resize(new BitmapDrawable(getResources(), icon.getAbsolutePath()));
+            } else if (customIconUri != null && !customIconUri.equals("")) {
+                // here they chose another app icon
+                try {
+                    return resize(pm.getActivityIcon(Intent.parseUri(customIconUri, 0)));
+                } catch (NameNotFoundException e) {
+                    e.printStackTrace();
+                } catch (URISyntaxException e) {
+                    e.printStackTrace();
+                }
+            }
+
             if (action.equals(ACTION_UNLOCK)) {
                 resId = R.drawable.ic_lockscreen_unlock;
                 drawable = res.getDrawable(resId);
@@ -418,7 +448,7 @@ class LockScreen extends LinearLayout implements KeyguardScreen {
                 toastMessage(mCarrier, message, toastColor, toastIcon);
 
                 mCallback.pokeWakelock();
-            } else if (action.equals(ACTION_APP_CUSTOM)) {
+            } else if (action.equals(ACTION_APP_CUSTOM) && customAppIntentUri != null) {
                 try {
                     Intent intent = Intent.parseUri(customAppIntentUri, 0);
                     intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -610,11 +640,13 @@ class LockScreen extends LinearLayout implements KeyguardScreen {
 
         // Update widget with initial ring state
         mUnlockWidgetMethods.updateResources();
+        // Update the settings everytime we draw lockscreen
+        updateSettings();
 
         if (DBG)
             Log.v(TAG, "*** LockScreen accel is "
                     + (mUnlockWidget.isHardwareAccelerated() ? "on" : "off"));
-    }
+		}
 
     private boolean isSilentMode() {
         return mAudioManager.getRingerMode() != AudioManager.RINGER_MODE_NORMAL;
@@ -688,6 +720,7 @@ class LockScreen extends LinearLayout implements KeyguardScreen {
                     + ", new config=" + getResources().getConfiguration());
         }
         updateConfiguration();
+        updateSettings();
     }
 
     /** {@inheritDoc} */
@@ -723,6 +756,9 @@ class LockScreen extends LinearLayout implements KeyguardScreen {
     public void onResume() {
         mStatusViewManager.onResume();
         postDelayed(mOnResumePing, ON_RESUME_PING_DELAY);
+        // update the settings when we resume
+        if (DEBUG) Log.d(TAG, "We are resuming and want to update settings");
+        updateSettings();
     }
 
     /** {@inheritDoc} */
@@ -755,6 +791,9 @@ class LockScreen extends LinearLayout implements KeyguardScreen {
             resolver.registerContentObserver(
                     Settings.System.getUriFor(Settings.System.LOCKSCREEN_LAYOUT), false,
                     this);
+            resolver.registerContentObserver(
+                    Settings.System.getUriFor(Settings.System.LOCKSCREEN_CUSTOM_TEXT_COLOR), false,
+                    this);
             updateSettings();
         }
 
@@ -765,26 +804,23 @@ class LockScreen extends LinearLayout implements KeyguardScreen {
     }
 
     private Drawable resize(Drawable image) {
+        int size = 50;
+        int px = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, size, getResources().getDisplayMetrics());
+
         Bitmap d = ((BitmapDrawable) image).getBitmap();
-        Bitmap bitmapOrig = Bitmap.createScaledBitmap(d, 55, 55, false);
+        Bitmap bitmapOrig = Bitmap.createScaledBitmap(d, px, px, false);
         return new BitmapDrawable(getContext().getResources(), bitmapOrig);
     }
 
-    private void launchCustomApp(String uri) {
-        try {
-            Intent intent = Intent.parseUri(uri, 0);
-            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            mContext.startActivity(intent);
-        } catch (URISyntaxException e) {
-            Log.e(TAG, "URISyntaxException: [" + uri + "]");
-        }
-    }
-
-    protected void updateSettings() {
+    private void updateSettings() {
+    	if (DEBUG) Log.d(TAG, "Settings for lockscreen have changed lets update");
         ContentResolver resolver = mContext.getContentResolver();
 
         mLockscreenTargets = Settings.System.getInt(resolver,
                 Settings.System.LOCKSCREEN_LAYOUT, LAYOUT_STOCK);
+        
+        int mLockscreenColor = Settings.System.getInt(resolver,
+                Settings.System.LOCKSCREEN_CUSTOM_TEXT_COLOR, COLOR_WHITE);
 
     }
 }
