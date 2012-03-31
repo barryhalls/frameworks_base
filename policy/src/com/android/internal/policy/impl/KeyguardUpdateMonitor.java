@@ -270,7 +270,7 @@ public class KeyguardUpdateMonitor {
         filter.addAction(TelephonyManager.ACTION_PHONE_STATE_CHANGED);
         filter.addAction(SPN_STRINGS_UPDATED_ACTION);
         filter.addAction(AudioManager.RINGER_MODE_CHANGED_ACTION);
-        filter.addAction("com.aokp.slimsettings.INTENT_WEATHER_UPDATE");
+        filter.addAction("com.ar.slimsettings.INTENT_WEATHER_UPDATE");
         context.registerReceiver(new BroadcastReceiver() {
 
             public void onReceive(Context context, Intent intent) {
@@ -302,7 +302,7 @@ public class KeyguardUpdateMonitor {
                 } else if (TelephonyManager.ACTION_PHONE_STATE_CHANGED.equals(action)) {
                     String state = intent.getStringExtra(TelephonyManager.EXTRA_STATE);
                     mHandler.sendMessage(mHandler.obtainMessage(MSG_PHONE_STATE_CHANGED, state));
-                } else if ("com.aokp.slimsettings.INTENT_WEATHER_UPDATE".equals(action)) {
+                } else if ("com.ar.slimsettings.INTENT_WEATHER_UPDATE".equals(action)) {
                     mHandler.sendMessage(mHandler.obtainMessage(MSG_WEATHER_CHANGED, intent));
                 }
             }
@@ -631,8 +631,7 @@ public class KeyguardUpdateMonitor {
      * through mHandler, this *must* be called from the UI thread.
      */
     public void reportSimUnlocked() {
-        mSimState = IccCard.State.READY;
-        handleSimStateChange(new SimArgs(mSimState));
+        handleSimStateChange(new SimArgs(IccCard.State.READY));
     }
 
     public boolean isKeyguardBypassEnabled() {

@@ -92,8 +92,10 @@ class LockScreen extends LinearLayout implements KeyguardScreen {
 
     private KeyguardStatusViewManager mStatusViewManager;
     private UnlockWidgetCommonMethods mUnlockWidgetMethods;
+    private UnlockWidgetCommonMethods mUnlockWidgetMethods2;
     private View mUnlockWidget;
-
+    //private View mUnlockWidget2;
+    
     private TextView mCarrier;
     private DigitalClock mDigitalClock;
 
@@ -129,7 +131,7 @@ class LockScreen extends LinearLayout implements KeyguardScreen {
             boolean vibe = mSilentMode
                     && (mAudioManager.getRingerMode() == AudioManager.RINGER_MODE_VIBRATE);
 
-            mSlidingTab.setRightTabResources(
+           /* mSlidingTab.setRightTabResources(
                     mSilentMode ? (vibe ? R.drawable.ic_jog_dial_vibrate_on
                             : R.drawable.ic_jog_dial_sound_off)
                             : R.drawable.ic_jog_dial_sound_on,
@@ -138,7 +140,7 @@ class LockScreen extends LinearLayout implements KeyguardScreen {
                     mSilentMode ? R.drawable.jog_tab_bar_right_sound_on
                             : R.drawable.jog_tab_bar_right_sound_off,
                     mSilentMode ? R.drawable.jog_tab_right_sound_on
-                            : R.drawable.jog_tab_right_sound_off);
+                            : R.drawable.jog_tab_right_sound_off);*/
         }
 
         /** {@inheritDoc} */
@@ -147,6 +149,7 @@ class LockScreen extends LinearLayout implements KeyguardScreen {
                 mCallback.goToUnlockScreen();
             } else if (whichHandle == SlidingTab.OnTriggerListener.RIGHT_HANDLE) {
                 toggleRingMode();
+                mUnlockWidgetMethods.updateResources();
                 mCallback.pokeWakelock();
             }
         }
@@ -172,6 +175,54 @@ class LockScreen extends LinearLayout implements KeyguardScreen {
 
         public void reset(boolean animate) {
             mSlidingTab.reset(animate);
+        }
+
+        public void ping() {
+        }
+    }
+    
+    class SlidingTabMethods2 implements SlidingTab.OnTriggerListener, UnlockWidgetCommonMethods {
+        private final SlidingTab mSlidingTab2;
+
+        SlidingTabMethods2(SlidingTab slidingTab) {
+            mSlidingTab2 = slidingTab;
+        }
+
+        public void updateResources() {
+        }
+
+        /** {@inheritDoc} */
+		public void onTrigger(View v, int whichHandle) {
+			if (whichHandle == SlidingTab.OnTriggerListener.LEFT_HANDLE) {
+				Intent callIntent = new Intent(Intent.ACTION_DIAL);
+				callIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+				getContext().startActivity(callIntent);
+				mCallback.goToUnlockScreen();
+			} else if (whichHandle == SlidingTab.OnTriggerListener.RIGHT_HANDLE) {
+				Intent intent = new Intent(Intent.ACTION_MAIN);
+                intent.addCategory(Intent.CATEGORY_LAUNCHER);
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                        | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
+                intent.setClassName("com.android.mms", "com.android.mms.ui.ConversationList");
+                mContext.startActivity(intent);
+                mCallback.goToUnlockScreen();
+				if (mCustomAppActivity != null) {
+					runActivity(mCustomAppActivity);
+				}
+			}
+		}
+
+        /** {@inheritDoc} */
+		public void onGrabbedStateChange(View v, int grabbedState) {
+			mCallback.pokeWakelock();
+		}
+
+        public View getView() {
+            return mSlidingTab2;
+        }
+
+        public void reset(boolean animate) {
+            mSlidingTab2.reset(animate);
         }
 
         public void ping() {
@@ -610,8 +661,11 @@ class LockScreen extends LinearLayout implements KeyguardScreen {
         mSilentMode = isSilentMode();
 
         mCarrier = (TextView) findViewById(R.id.carrier);
+        mDigitalClock = (DigitalClock) findViewById(R.id.time);
 
         mUnlockWidget = findViewById(R.id.unlock_widget);
+        //mUnlockWidget2 = findViewById(R.id.unlock_widget2);
+        //if(mUnlockWidget2 == null) Log.e("HELP", "ERROR UNLOCKWIDGET2 IS NULL");
         if (mUnlockWidget instanceof SlidingTab) {
             SlidingTab slidingTabView = (SlidingTab) mUnlockWidget;
             slidingTabView.setHoldAfterTrigger(true, false);
@@ -624,6 +678,27 @@ class LockScreen extends LinearLayout implements KeyguardScreen {
             SlidingTabMethods slidingTabMethods = new SlidingTabMethods(slidingTabView);
             slidingTabView.setOnTriggerListener(slidingTabMethods);
             mUnlockWidgetMethods = slidingTabMethods;
+           /* SlidingTab slidingTabView2 = (SlidingTab) mUnlockWidget2;
+            slidingTabView2.setHoldAfterTrigger(true, false);
+            slidingTabView2.setLeftHintText(R.string.lockscreen_phone_label);
+            slidingTabView2.setLeftTabResources(
+                    R.drawable.ic_jog_dial_answer,
+                    R.drawable.jog_tab_target_green,
+                    R.drawable.jog_tab_bar_left_generic,
+                    R.drawable.jog_tab_left_generic);
+            slidingTabView2.setRightHintText(R.string.lockscreen_custom_label);
+            slidingTabView2.setRightTabResources(
+                    R.drawable.ic_jog_dial_custom,
+                    R.drawable.jog_tab_target_green,
+                    R.drawable.jog_tab_bar_right_generic,
+                    R.drawable.jog_tab_right_generic);
+            SlidingTabMethods2 slidingTabMethods2 = new SlidingTabMethods2(slidingTabView2);
+            slidingTabView2.setOnTriggerListener(slidingTabMethods2);
+            mUnlockWidgetMethods2 = slidingTabMethods2;
+            if (mLockscreen4Tab)
+                slidingTabView2.setVisibility(View.VISIBLE);
+            else	
+                slidingTabView2.setVisibility(View.GONE);*/
         } else if (mUnlockWidget instanceof WaveView) {
             WaveView waveView = (WaveView) mUnlockWidget;
             WaveViewMethods waveViewMethods = new WaveViewMethods(waveView);
@@ -822,5 +897,30 @@ class LockScreen extends LinearLayout implements KeyguardScreen {
         int mLockscreenColor = Settings.System.getInt(resolver,
                 Settings.System.LOCKSCREEN_CUSTOM_TEXT_COLOR, COLOR_WHITE);
 
+        // digital clock first (see @link com.android.internal.widget.DigitalClock.updateTime())
+        try {
+            mDigitalClock.updateTime();
+        } catch (NullPointerException npe) {
+            if (DEBUG) Log.d(TAG, "date update time failed: NullPointerException");
+        }
+
+        // then the rest (see @link com.android.internal.policy.impl.KeyguardStatusViewManager.updateColors())
+        try {
+            mStatusViewManager.updateColors(); 
+        } catch (NullPointerException npe) {
+            if (DEBUG) Log.d(TAG, "KeyguardStatusViewManager.updateColors() failed: NullPointerException");
+        }
     }
+
+	private void runActivity(String uri) {
+		try {
+			Intent i = Intent.parseUri(uri, 0);
+			i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+					| Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
+			mContext.startActivity(i);
+			mCallback.goToUnlockScreen();
+		} catch (URISyntaxException e) {
+		} catch (ActivityNotFoundException e) {
+		}
+	}
 }

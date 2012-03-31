@@ -31,6 +31,8 @@ import com.android.internal.telephony.RILConstants;
 import com.android.internal.telephony.SmsResponse;
 import com.android.internal.telephony.cdma.CdmaCallWaitingNotification;
 import com.android.internal.telephony.cdma.CdmaInformationRecords;
+import com.android.internal.telephony.cdma.CdmaInformationRecords.CdmaSignalInfoRec;
+import com.android.internal.telephony.cdma.SignalToneUtil;
 
 import android.util.Log;
 
@@ -47,6 +49,7 @@ public class SamsungRIL extends RIL implements CommandsInterface {
     static final int RIL_UNSOL_STK_SEND_SMS_RESULT = 11002;
     static final int RIL_UNSOL_O2_HOME_ZONE_INFO = 11007;
     static final int RIL_UNSOL_DEVICE_READY_NOTI = 11008;
+    static final int RIL_UNSOL_GPS_NOTI = 11009;
     static final int RIL_UNSOL_SAMSUNG_UNKNOWN_MAGIC_REQUEST_3 = 11010;
     static final int RIL_UNSOL_SAMSUNG_UNKNOWN_MAGIC_REQUEST_2 = 11011;
     static final int RIL_UNSOL_HSDPA_STATE_CHANGED = 11016;
@@ -121,7 +124,7 @@ public class SamsungRIL extends RIL implements CommandsInterface {
             case RIL_REQUEST_SWITCH_WAITING_OR_HOLDING_AND_ACTIVE: ret =  responseVoid(p); break;
             case RIL_REQUEST_CONFERENCE: ret =  responseVoid(p); break;
             case RIL_REQUEST_UDUB: ret =  responseVoid(p); break;
-            case RIL_REQUEST_LAST_CALL_FAIL_CAUSE: ret =  responseInts(p); break;
+            case RIL_REQUEST_LAST_CALL_FAIL_CAUSE: ret =  responseLastCallFailCause(p); break;
             case RIL_REQUEST_SIGNAL_STRENGTH: ret =  responseSignalStrength(p); break;
             case RIL_REQUEST_VOICE_REGISTRATION_STATE: ret =  responseVoiceRegistrationState(p); break;
             case RIL_REQUEST_DATA_REGISTRATION_STATE: ret =  responseStrings(p); break;
@@ -144,7 +147,7 @@ public class SamsungRIL extends RIL implements CommandsInterface {
             case RIL_REQUEST_GET_IMEI: ret =  responseString(p); break;
             case RIL_REQUEST_GET_IMEISV: ret =  responseString(p); break;
             case RIL_REQUEST_ANSWER: ret =  responseVoid(p); break;
-            case RIL_REQUEST_DEACTIVATE_DATA_CALL: ret =  responseDeactivateDataCall(p); break;
+            case RIL_REQUEST_DEACTIVATE_DATA_CALL: ret =  responseVoid(p); break;
             case RIL_REQUEST_QUERY_FACILITY_LOCK: ret =  responseInts(p); break;
             case RIL_REQUEST_SET_FACILITY_LOCK: ret =  responseInts(p); break;
             case RIL_REQUEST_CHANGE_BARRING_PASSWORD: ret =  responseVoid(p); break;
@@ -343,6 +346,7 @@ public class SamsungRIL extends RIL implements CommandsInterface {
         case RIL_UNSOL_O2_HOME_ZONE_INFO: ret = responseVoid(p); break;
         case RIL_UNSOL_STK_SEND_SMS_RESULT: ret = responseVoid(p); break;
         case RIL_UNSOL_DEVICE_READY_NOTI: ret = responseVoid(p); break;
+        case RIL_UNSOL_GPS_NOTI: ret = responseVoid(p); break; // Ignored in TW RIL.
         case RIL_UNSOL_SAMSUNG_UNKNOWN_MAGIC_REQUEST: ret = responseVoid(p); break;
         case RIL_UNSOL_SAMSUNG_UNKNOWN_MAGIC_REQUEST_2: ret = responseVoid(p); break;
         case RIL_UNSOL_SAMSUNG_UNKNOWN_MAGIC_REQUEST_3: ret = responseVoid(p); break;
@@ -776,7 +780,24 @@ public class SamsungRIL extends RIL implements CommandsInterface {
 
         return response;
     }
-    @Override
+
+    protected Object
+    responseLastCallFailCause(Parcel p) {
+        int response[] = (int[])responseInts(p);
+
+        if (mIsSamsungCdma && response.length > 0 &&
+            response[0] == com.android.internal.telephony.cdma.CallFailCause.ERROR_UNSPECIFIED) {
+
+            // Far-end hangup returns ERROR_UNSPECIFIED, which shows "Call Lost" dialog.
+            Log.d(LOG_TAG, "Overriding ERROR_UNSPECIFIED fail cause with NORMAL_CLEARING.");
+            response[0] = com.android.internal.telephony.cdma.CallFailCause.NORMAL_CLEARING;
+        }
+
+        return response;
+    }
+
+
+	    @Override
     protected Object
     responseSignalStrength(Parcel p) {
         int numInts = 12;
@@ -784,6 +805,15 @@ public class SamsungRIL extends RIL implements CommandsInterface {
 
         /* TODO: Add SignalStrength class to match RIL_SignalStrength */
         response = new int[numInts];
+		
+		if("SPH-D710".equals(SystemProperties.get("ro.product.device"))){
+			for(int i = 0 ; i < numInts ; i++){
+				response[i] = p.readInt();
+			}
+
+			return response;
+		}
+		
         for (int i = 0 ; i < 7 ; i++) {
             response[i] = p.readInt();
         }
@@ -791,8 +821,8 @@ public class SamsungRIL extends RIL implements CommandsInterface {
         for (int i = 7; i < numInts; i++) {
             response[i] = -1;
         }
-
-        if (mIsSamsungCdma)
+		
+		if (mIsSamsungCdma)
             // Framework takes care of the rest for us.
             return response;
 
@@ -877,6 +907,14 @@ public class SamsungRIL extends RIL implements CommandsInterface {
                 }
             }
         } else {
+            if (mIsSamsungCdma) {
+                // On rare occasion the pppd_cdma service is left active from a stale
+                // session, causing the data call setup to fail.  Make sure that pppd_cdma
+                // is stopped now, so that the next setup attempt may succeed.
+                Log.d(LOG_TAG, "Set ril.cdma.data_state=0 to make sure pppd_cdma is stopped.");
+                SystemProperties.set("ril.cdma.data_state", "0");
+            }
+
             dataCall.status = FailCause.ERROR_UNSPECIFIED.getErrorCode(); // Who knows?
         }
 
@@ -918,15 +956,16 @@ public class SamsungRIL extends RIL implements CommandsInterface {
         return false;
     }
 
-    protected Object
-    responseDeactivateDataCall(Parcel p) {
+    @Override
+    public void
+    deactivateDataCall(int cid, int reason, Message result) {
         if (mIsSamsungCdma) {
             // Disconnect: Set ril.cdma.data_state=0 to stop pppd_cdma service.
             Log.d(LOG_TAG, "Set ril.cdma.data_state=0.");
             SystemProperties.set("ril.cdma.data_state", "0");
         }
 
-        return null;
+        super.deactivateDataCall(cid, reason, result);
     }
 
     protected Object
@@ -941,6 +980,62 @@ public class SamsungRIL extends RIL implements CommandsInterface {
         }
 
         return response;
+    }
+
+    // Workaround for Samsung CDMA "ring of death" bug:
+    //
+    // Symptom: As soon as the phone receives notice of an incoming call, an
+    //   audible "old fashioned ring" is emitted through the earpiece and
+    //   persists through the duration of the call, or until reboot if the call
+    //   isn't answered.
+    //
+    // Background: The CDMA telephony stack implements a number of "signal info
+    //   tones" that are locally generated by ToneGenerator and mixed into the
+    //   voice call path in response to radio RIL_UNSOL_CDMA_INFO_REC requests.
+    //   One of these tones, IS95_CONST_IR_SIG_IS54B_L, is requested by the
+    //   radio just prior to notice of an incoming call when the voice call
+    //   path is muted.  CallNotifier is responsible for stopping all signal
+    //   tones (by "playing" the TONE_CDMA_SIGNAL_OFF tone) upon receipt of a
+    //   "new ringing connection", prior to unmuting the voice call path.
+    //
+    // Problem: CallNotifier's incoming call path is designed to minimize
+    //   latency to notify users of incoming calls ASAP.  Thus,
+    //   SignalInfoTonePlayer requests are handled asynchronously by spawning a
+    //   one-shot thread for each.  Unfortunately the ToneGenerator API does
+    //   not provide a mechanism to specify an ordering on requests, and thus,
+    //   unexpected thread interleaving may result in ToneGenerator processing
+    //   them in the opposite order that CallNotifier intended.  In this case,
+    //   playing the "signal off" tone first, followed by playing the "old
+    //   fashioned ring" indefinitely.
+    //
+    // Solution: An API change to ToneGenerator is required to enable
+    //   SignalInfoTonePlayer to impose an ordering on requests (i.e., drop any
+    //   request that's older than the most recent observed).  Such a change,
+    //   or another appropriate fix should be implemented in AOSP first.
+    //
+    // Workaround: Intercept RIL_UNSOL_CDMA_INFO_REC requests from the radio,
+    //   check for a signal info record matching IS95_CONST_IR_SIG_IS54B_L, and
+    //   drop it so it's never seen by CallNotifier.  If other signal tones are
+    //   observed to cause this problem, they should be dropped here as well.
+    @Override
+    protected void
+    notifyRegistrantsCdmaInfoRec(CdmaInformationRecords infoRec) {
+        final int response = RIL_UNSOL_CDMA_INFO_REC;
+
+        if (/* mIsSamsungCdma && */ infoRec.record instanceof CdmaSignalInfoRec) {
+            CdmaSignalInfoRec sir = (CdmaSignalInfoRec)infoRec.record;
+            if (sir != null && sir.isPresent &&
+                sir.signalType == SignalToneUtil.IS95_CONST_IR_SIGNAL_IS54B &&
+                sir.alertPitch == SignalToneUtil.IS95_CONST_IR_ALERT_MED    &&
+                sir.signal     == SignalToneUtil.IS95_CONST_IR_SIG_IS54B_L) {
+
+                Log.d(LOG_TAG, "Dropping \"" + responseToString(response) + " " +
+                      retToString(response, sir) + "\" to prevent \"ring of death\" bug.");
+                return;
+            }
+        }
+
+        super.notifyRegistrantsCdmaInfoRec(infoRec);
     }
 
     protected class SamsungDriverCall extends DriverCall {
