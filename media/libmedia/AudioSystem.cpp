@@ -749,25 +749,6 @@ void AudioSystem::AudioPolicyServiceClient::binderDied(const wp<IBinder>& who) {
 
     LOGW("AudioPolicyService server died!");
 }
-#ifdef YAMAHAPLAYER
-extern "C" bool _ZN7android11AudioSystem17isSeparatedStreamE19audio_stream_type_t(audio_stream_type_t stream)
-{
-    LOGD("android::AudioSystem::isSeparatedStream(audio_stream_type_t) called!");
-    LOGD("audio_stream_type_t: %d", stream);
-
-/* this is the correct implementation, but breaks headset volume rocker.
-    if (stream == 3  || stream == 9  || stream == 10
-     || stream == 12 || stream == 13 || stream == 14)
-    {
-        LOGD("isSeparatedStream: true");
-        return true;
-    }
-*/
-
-    LOGD("isSeparatedStream: false");
-    return false;
-}
-#endif // YAMAHAPLAYER
 
 #ifdef USES_AUDIO_LEGACY
 extern "C" uint32_t _ZN7android11AudioSystem8popCountEj(uint32_t u)
@@ -828,6 +809,26 @@ extern "C" bool _ZN7android11AudioSystem15isLowVisibilityENS0_11stream_typeE(aud
 }
 
 #endif // AUDIO_LEGACY
+
+#ifdef YAMAHAPLAYER
+extern "C" bool _ZN7android11AudioSystem17isSeparatedStreamE19audio_stream_type_t(audio_stream_type_t stream)
+{
+    LOGD("android::AudioSystem::isSeparatedStream(audio_stream_type_t) called!");
+    LOGD("audio_stream_type_t: %d", stream);
+
+/* this is the correct implementation, but breaks headset volume rocker.
+    if (stream == 3  || stream == 9  || stream == 10
+     || stream == 12 || stream == 13 || stream == 14)
+    {
+        LOGD("isSeparatedStream: true");
+        return true;
+    }
+*/
+
+    LOGD("isSeparatedStream: false");
+    return false;
+}
+#endif // YAMAHAPLAYER
 
 }; // namespace android
 

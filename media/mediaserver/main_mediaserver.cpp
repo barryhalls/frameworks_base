@@ -45,7 +45,6 @@ void instantiate(void);
 } }
 #endif
 
-
 int main(int argc, char** argv)
 {
     sp<ProcessState> proc(ProcessState::self());

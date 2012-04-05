@@ -1494,7 +1494,13 @@ status_t OMXCodec::setupBitRate(int32_t bitRate) {
             &bitrateType, sizeof(bitrateType));
     CHECK_EQ(err, (status_t)OK);
 
+#ifdef SAMSUNG_CODEC_SUPPORT
+    // Samsung codecs ignore the bitrate if we don't explicitly
+    // tell them that we want a constant bitrate.
+    bitrateType.eControlRate = OMX_Video_ControlRateConstant;
+#else
     bitrateType.eControlRate = OMX_Video_ControlRateVariable;
+#endif
     bitrateType.nTargetBitrate = bitRate;
 
     err = mOMX->setParameter(
@@ -1852,10 +1858,7 @@ status_t OMXCodec::setVideoOutputFormat(
 #endif
                );
 #ifdef SAMSUNG_CODEC_SUPPORT
-        if (!strcmp("OMX.SEC.FP.AVC.Decoder", mComponentName) ||
-            !strcmp("OMX.SEC.AVC.Decoder", mComponentName) ||
-            !strcmp("OMX.SEC.MPEG4.Decoder", mComponentName) ||
-            !strcmp("OMX.SEC.H263.Decoder", mComponentName)) {
+        if (!strncmp("OMX.SEC.", mComponentName, 8)) {
             if (mNativeWindow == NULL)
                 format.eColorFormat = OMX_COLOR_FormatYUV420Planar;
             else

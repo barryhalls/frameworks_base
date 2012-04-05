@@ -471,19 +471,19 @@ public class TelephonyManager {
     }
     
     public void toggleLTE(boolean on) {
-        /*try {
-            //getITelephony().toggleLTE(on);
+        try {
+            getITelephony().toggleLTE(on);
         } catch (RemoteException e) {
             // Silently fail
-        }*/
+        }
     }
     
     public void toggle2G(boolean on) {
-        /*try {
-            //getITelephony().toggle2G(on);
+        try {
+            getITelephony().toggle2G(on);
         } catch (RemoteException e) {
             // Silently fail
-        }*/
+        }
     }
 
     /** Unknown network class. {@hide} */
