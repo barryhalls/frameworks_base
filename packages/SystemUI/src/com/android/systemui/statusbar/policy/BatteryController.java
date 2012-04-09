@@ -249,7 +249,7 @@ public class BatteryController extends LinearLayout {
             default:
                 mBatteryText.setVisibility(View.GONE);
                 mBatteryCenterText.setVisibility(View.GONE);
-                mBatteryIcon.setVisibility(View.VISIBLE);
+                mBatteryIcon.setVisibility(View.GONE);
                 mBatteryTextOnly.setVisibility(View.GONE);
                 setVisibility(View.VISIBLE);
                 break;
