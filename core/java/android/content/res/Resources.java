@@ -1479,7 +1479,15 @@ public class Resources {
                     mTmpConfig.locale = Locale.getDefault();
                 }
                 configChanges = mConfiguration.updateFrom(mTmpConfig);
-                configChanges = ActivityInfo.activityInfoConfigToNative(configChanges);
+
+                /* This is ugly, but modifying the activityInfoConfigToNative
+                 * adapter would be messier */
+                if ((configChanges & ActivityInfo.CONFIG_THEME_RESOURCE) != 0) {
+                    configChanges = ActivityInfo.activityInfoConfigToNative(configChanges);
+                    configChanges |= ActivityInfo.CONFIG_THEME_RESOURCE;
+                } else {
+                    configChanges = ActivityInfo.activityInfoConfigToNative(configChanges);
+                }
             }
             if (mConfiguration.locale == null) {
                 mConfiguration.locale = Locale.getDefault();
@@ -1541,6 +1549,18 @@ public class Resources {
     private void clearDrawableCache(
             LongSparseArray<WeakReference<ConstantState>> cache,
             int configChanges) {
+        /*
+         * Quick test to find out if the config change that occurred should
+         * trigger a full cache wipe.
+         */
+        if (Configuration.needNewResources(configChanges, 0)) {
+            if (DEBUG_CONFIG) {
+                Log.d(TAG, "Clear drawable cache from config changes: 0x"
+                        + Integer.toHexString(configChanges));
+            }
+            cache.clear();
+            return;
+        }
         int N = cache.size();
         if (DEBUG_CONFIG) {
             Log.d(TAG, "Cleaning up drawables config changes: 0x"
@@ -1892,7 +1912,13 @@ public class Resources {
             flushLayoutCache();
         }
     }
-    
+
+    public final void updateStringCache() {
+        synchronized (mTmpValue) {
+            mAssets.recreateStringBlocks();
+        }
+    }
+ 
     /*package*/ Drawable loadDrawable(TypedValue value, int id)
             throws NotFoundException {
 
