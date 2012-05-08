@@ -65,6 +65,10 @@ public class KeyButtonView extends ImageView {
 
     int durationSpeedOn = 500;
     int durationSpeedOff = 50;
+<<<<<<< HEAD
+=======
+    int mGlowBGColor = Integer.MIN_VALUE;
+>>>>>>> ccee579... further theme engine integration
 
     Runnable mCheckLongPress = new Runnable() {
         public void run() {
@@ -151,6 +155,17 @@ public class KeyButtonView extends ImageView {
     public void setGlowBackground(int id) {
         mGlowBG = getResources().getDrawable(id);
         if (mGlowBG != null) {
+<<<<<<< HEAD
+=======
+            int defaultColor = mContext.getResources().getColor(
+                    com.android.internal.R.color.holo_blue_light);
+            if (mGlowBGColor == Integer.MIN_VALUE) {
+                mGlowBGColor = defaultColor;
+            }
+            mGlowBG.setColorFilter(null);
+            mGlowBG.setColorFilter(mGlowBGColor, PorterDuff.Mode.SRC_ATOP);
+
+>>>>>>> ccee579... further theme engine integration
             mDrawingAlpha = BUTTON_QUIESCENT_ALPHA;
         }
     }
@@ -362,7 +377,23 @@ public class KeyButtonView extends ImageView {
                 Settings.System.NAVIGATION_BAR_BUTTON_ALPHA,
                 0.6f);
         setDrawingAlpha(BUTTON_QUIESCENT_ALPHA);
+<<<<<<< HEAD
         invalidate();
+=======
+        
+        if (mGlowBG != null) {
+            int defaultColor = mContext.getResources().getColor(
+                    com.android.internal.R.color.holo_blue_light);
+            mGlowBGColor = Settings.System.getInt(resolver,
+                    Settings.System.NAVIGATION_BAR_GLOW_TINT, defaultColor);
+            
+            if (mGlowBGColor == Integer.MIN_VALUE) {
+                mGlowBGColor = defaultColor;
+            }
+            mGlowBG.setColorFilter(null);
+            mGlowBG.setColorFilter(mGlowBGColor, PorterDuff.Mode.SRC_ATOP);
+        }
+>>>>>>> ccee579... further theme engine integration
 
         try {
             int color = Settings.System.getInt(resolver, Settings.System.NAVIGATION_BAR_TINT);
@@ -376,6 +407,6 @@ public class KeyButtonView extends ImageView {
             }
         } catch (SettingNotFoundException e) {
         }
-
+        invalidate();
     }
 }
