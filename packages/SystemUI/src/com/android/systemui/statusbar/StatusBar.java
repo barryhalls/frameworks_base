@@ -176,7 +176,7 @@ public abstract class StatusBar extends SystemUI implements CommandQueue.Callbac
     }
 
     private void refreshWeather() {
-        Intent weatherintent = new Intent("com.aokp.romcontrol.INTENT_WEATHER_REQUEST");
+        Intent weatherintent = new Intent("com.ar.slimsettings.INTENT_WEATHER_REQUEST");
         weatherintent.putExtra(android.content.Intent.EXTRA_TEXT, "updateweather");
         mContext.sendBroadcast(weatherintent);
     }

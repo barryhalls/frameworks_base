@@ -2769,7 +2769,7 @@ public class PhoneStatusBar extends StatusBar {
             if(mNavigationBarView != null)
                 mNavigationBarView.updateSettings();
             recreateStatusBar();
-            Intent weatherintent = new Intent("com.aokp.romcontrol.INTENT_WEATHER_REQUEST");
+            Intent weatherintent = new Intent("com.ar.slimsettings.INTENT_WEATHER_REQUEST");
             weatherintent.putExtra(android.content.Intent.EXTRA_TEXT, "updateweather");
             mContext.sendBroadcast(weatherintent);
         } else {
