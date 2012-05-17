@@ -79,15 +79,6 @@ public class FChargeToggle extends Toggle {
     }
 
     private final BroadcastReceiver mIntentReceiver = new BroadcastReceiver() {
-<<<<<<< HEAD
-    	@Override
-    	public void onReceive(Context context, Intent intent) {
-    		String action = intent.getAction();
-    		if (action.equals("com.ar.slimsettings.FCHARGE_CHANGED")) {
-    			updateState();
-    		}
-    }
-=======
         @Override
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
@@ -95,6 +86,5 @@ public class FChargeToggle extends Toggle {
                 updateState();
             }
         }
->>>>>>> ccee579... further theme engine integration
     };
 }

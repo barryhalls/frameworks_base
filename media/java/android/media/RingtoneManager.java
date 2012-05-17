@@ -515,8 +515,6 @@ public class RingtoneManager {
                 : null;
     }
 
-<<<<<<< HEAD
-=======
     private String getThemeWhereClause(String uriColumn) {
         /* Filter out themes with no ringtone and the default theme (which has no package). */
         String clause = uriColumn + " IS NOT NULL AND LENGTH(theme_package) > 0";
@@ -549,7 +547,6 @@ public class RingtoneManager {
         }
     }
 
->>>>>>> c98f176... Merge commit 'themes-4.0' into 'ics'
     private void setFilterColumnsList(int type) {
         List<String> columns = mFilterColumns;
         columns.clear();

@@ -476,12 +476,9 @@ public class NotificationManagerService extends INotificationManager.Stub
 
         SettingsObserver observer = new SettingsObserver(mHandler);
         observer.observe();
-<<<<<<< HEAD
-=======
-        QuietHoursSettingsObserver qhObserver = new QuietHoursSettingsObserver(mHandler);
-        qhObserver.observe();
+        //QuietHoursSettingsObserver qhObserver = new QuietHoursSettingsObserver(mHandler);
+        //qhObserver.observe();
         ThemeUtils.registerThemeChangeReceiver(mContext, mThemeChangeReceiver);
->>>>>>> 1539b5a... Allow theming of framework UI elements.
     }
 
     void systemReady() {
