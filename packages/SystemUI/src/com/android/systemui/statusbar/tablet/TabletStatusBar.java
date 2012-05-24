@@ -144,6 +144,7 @@ public class TabletStatusBar extends StatusBar implements
     final static String ACTION_SEARCH = "**search**";
     final static String ACTION_MENU = "**menu**";
     final static String ACTION_POWER = "**power**";
+	final static String ACTION_SCREENSHOT = "**screenshot**";
     final static String ACTION_RECENTS = "**recents**";
     final static String ACTION_KILL = "**kill**";
     final static String ACTION_NULL = "**null**";
@@ -2186,7 +2187,10 @@ public class TabletStatusBar extends StatusBar implements
             } else if (uri.equals(ACTION_POWER)) {
 
                 return mContext.getResources().getDrawable(R.drawable.ic_sysbar_power);
-            }
+            } else if (uri.equals(ACTION_SCREENSHOT)) {
+				
+				return mContext.getResources().getDrawable(R.drawable.ic_sysbar_screenshot);
+			}
         } else {
             try {
                 return mContext.getPackageManager().getActivityIcon(Intent.parseUri(uri, 0));
